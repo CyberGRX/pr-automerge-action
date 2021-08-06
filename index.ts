@@ -151,9 +151,13 @@ async function run() {
       `The github context: ${JSON.stringify(github.context, undefined, 2)}`,
     );
 
-    if (disableAutoMerge && currentMergeState) {
-      console.log('Disabling auto-merge for this PR.');
-      await setAutoMerge(pullRequest, false, strategy);
+    if (disableAutoMerge) {
+      if (currentMergeState) {
+        console.log('Disabling auto-merge for this PR.');
+        await setAutoMerge(pullRequest, false, strategy);
+      } else {
+        console.log('Auto Merge is already in the correct state.');
+      }
     } else if (enableAutoMerge && !stateMatchesStrategy) {
       console.log('Enabling auto-merge for this PR.');
       await setAutoMerge(pullRequest, true, strategy);
