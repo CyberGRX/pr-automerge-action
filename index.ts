@@ -15,7 +15,7 @@ const enableAutoMergeMutation = `mutation enableAutoMerge($pullRequestId: ID!, $
   }
 }`;
 
-const mergeBranchMutation = `mutation mergeBranch($repositoryId: ID!, $from: String!, $to: String!)) {
+const mergeBranchMutation = `mutation mergeBranch($repositoryId: ID!, $from: String!, $to: String!) {
   mergeBranch(input:{repositoryId:$repositoryId, base:$to, head:$from}) {
     mergeCommit {
       id
