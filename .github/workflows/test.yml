@@ -17,7 +17,7 @@ jobs:
         uses: ./ # Uses an action in the root directory
         id: pr-auto-configuration
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_MERGE_AUTOMATION }}
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         with:
           activate-label: 'merge:auto'
           disabled-label: 'merge:manual'
