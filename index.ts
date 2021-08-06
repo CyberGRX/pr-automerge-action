@@ -93,7 +93,7 @@ async function run() {
         };
         if (enable) {
           variables.strategy = strategy;
-          variables.author = author;
+          variables.author = 'dean.kooiman@cybergrx.com';
         }
         console.log(`${JSON.stringify(variables)}`);
         const result = await graphqlWithAuth(query, variables);
