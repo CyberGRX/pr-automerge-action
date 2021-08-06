@@ -157,13 +157,13 @@ async function run() {
     if (disableAutoMerge) {
       if (currentMergeState) {
         console.log('Disabling auto-merge for this PR.');
-        await setAutoMerge(pullRequest, false, strategy, author);
+        await setAutoMerge(pullRequest, false, strategy, null);
       } else {
         console.log('Auto Merge is already in the correct state.');
       }
     } else if (enableAutoMerge && !stateMatchesStrategy) {
       console.log('Enabling auto-merge for this PR.');
-      await setAutoMerge(pullRequest, true, strategy, null);
+      await setAutoMerge(pullRequest, true, strategy, author);
     } else {
       console.log('Auto Merge is already in the correct state.');
     }
