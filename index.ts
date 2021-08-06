@@ -55,6 +55,16 @@ declare type PullRequestVariables = {
   number: Number;
 };
 
+declare type PullRequestAutoMergeResponse = {
+  repository?: {
+    pullRequest?: {
+      autoMergeRequest?: {
+        mergeMethod: String;
+      };
+    };
+  };
+};
+
 async function run() {
   try {
     const token = process.env['GITHUB_TOKEN'];
@@ -90,25 +100,32 @@ async function run() {
       }
     };
 
-    const getPullRequest = async () => {
+    const getAutoMergeState = async () => {
       const variables: PullRequestVariables = {
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
         number: github.context.payload.pull_request.number,
       };
       try {
-        const result = await graphqlWithAuth(getPullRequestQuery, variables);
+        const result = (await graphqlWithAuth(
+          getPullRequestQuery,
+          variables,
+        )) as PullRequestAutoMergeResponse;
+
         const response = JSON.stringify(result, undefined, 2);
         console.log(`The response payload: ${response}`);
+
+        return result.repository?.pullRequest?.autoMergeRequest?.mergeMethod;
       } catch (error) {
         console.log(`Request failed: ${JSON.stringify(error)}`);
       }
+      return null;
     };
 
     const label = core.getInput('label');
     const strategy = core.getInput('strategy');
 
-    await getPullRequest();
+    const currentMergeState = await getAutoMergeState();
 
     const payload = github.context.payload as PullRequestEvent;
     const pr = payload.pull_request;
@@ -116,6 +133,8 @@ async function run() {
     const found = pr.labels.find(l => l.name === label);
     if (!found) {
       console.log('Not found');
+    } else {
+      console.log('Merge state', currentMergeState);
     }
   } catch (error) {
     core.setFailed(error.message);
