@@ -138,7 +138,12 @@ async function run() {
     );
 
     const enableAutoMerge = foundActiveLabel !== undefined;
-    const disableAutoMerge = foundDisabledLabel !== undefined;
+    const enableLabelRemoved =
+      payload.action === 'unlabeled' && payload?.label?.name === activatedLabel;
+
+    // Disable merging if the label is set or the enable label is removed
+    const disableAutoMerge =
+      foundDisabledLabel !== undefined || enableLabelRemoved;
 
     const stateMatchesStrategy = currentMergeState === strategy;
 
