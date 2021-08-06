@@ -122,6 +122,9 @@ async function run() {
         console.log(`The response payload: ${response}`);
 
         // Successfully activated auto-merge make sure that base is merged into this branch
+        console.log(
+          `Merging any changes from ${retrievedPullRequest.repository.pullRequest.baseRefName} into this branch.`,
+        );
         mergeBranch({
           repositoryId: retrievedPullRequest.repository.id,
           from: retrievedPullRequest.repository.pullRequest.baseRefName,
@@ -138,6 +141,9 @@ async function run() {
             'Pull request is not in the correct state to enable auto-merge',
           )
         ) {
+          console.log(
+            'There were no pending checks, attempting to directly merge this PR.',
+          );
           mergeBranch({
             repositoryId: retrievedPullRequest.repository.id,
             from: retrievedPullRequest.repository.pullRequest.headRefName,
