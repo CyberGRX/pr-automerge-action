@@ -15,6 +15,14 @@ const enableAutoMergeMutation = `mutation enableAutoMerge($pullRequestId: ID!, $
   }
 }`;
 
+const mergeBranchMutation = `mutation mergeBranch($repositoryId: ID!, $from: String!, $to: String!)) {
+  mergeBranch(input:{repositoryId:$repositoryId, base:$to, head:$from}) {
+    mergeCommit {
+      id
+    }
+  }
+}`;
+
 const disableAutoMergeMutation = `mutation disableAutoMerge($pullRequestId: ID!) {
   disablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId}) {
     pullRequest {
@@ -29,7 +37,10 @@ const disableAutoMergeMutation = `mutation disableAutoMerge($pullRequestId: ID!)
 
 const getPullRequestQuery = `query getPullRequest($owner: String!, $repo: String!, $number: Int!) {
   repository(name: $repo, owner: $owner) {
+    id
     pullRequest(number: $number) {
+      headRefName
+      baseRefName
       autoMergeRequest {
         mergeMethod
       }
@@ -43,6 +54,12 @@ declare type AutoMergeVariables = {
   strategy?: String;
 };
 
+declare type MergeBranchVariables = {
+  repositoryId: String;
+  from: String;
+  to: String;
+};
+
 declare type PullRequestVariables = {
   owner: String;
   repo: String;
@@ -51,7 +68,10 @@ declare type PullRequestVariables = {
 
 declare type PullRequestAutoMergeResponse = {
   repository?: {
+    id: String;
     pullRequest?: {
+      headRefName: String;
+      baseRefName: String;
       autoMergeRequest?: {
         mergeMethod: String;
       };
@@ -71,8 +91,19 @@ async function run() {
       headers: { authorization: `token ${token}` },
     });
 
+    const mergeBranch = async (variables: MergeBranchVariables) => {
+      try {
+        const result = await graphqlWithAuth(mergeBranchMutation, variables);
+        const response = JSON.stringify(result, undefined, 2);
+        console.log(`The response payload: ${response}`);
+      } catch (error) {
+        console.log(`Request failed: ${JSON.stringify(error)}`);
+      }
+    };
+
     const setAutoMerge = async (
       pullRequest: PullRequest,
+      retrievedPullRequest: PullRequestAutoMergeResponse,
       enable: boolean,
       strategy: string,
     ) => {
@@ -89,12 +120,34 @@ async function run() {
         const result = await graphqlWithAuth(query, variables);
         const response = JSON.stringify(result, undefined, 2);
         console.log(`The response payload: ${response}`);
+
+        // Successfully activated auto-merge make sure that base is merged into this branch
+        mergeBranch({
+          repositoryId: retrievedPullRequest.repository.id,
+          from: retrievedPullRequest.repository.pullRequest.baseRefName,
+          to: retrievedPullRequest.repository.pullRequest.headRefName,
+        });
       } catch (error) {
-        console.log(`Request failed: ${JSON.stringify(error)}`);
+        const errorStr = JSON.stringify(error);
+        console.log(`Request failed: ${errorStr}`);
+
+        // Attempt to directly merge if the PR was not in an auto-mergable state (no pending checks == direct merge)
+        if (
+          retrievedPullRequest.repository &&
+          errorStr.includes(
+            'Pull request is not in the correct state to enable auto-merge',
+          )
+        ) {
+          mergeBranch({
+            repositoryId: retrievedPullRequest.repository.id,
+            from: retrievedPullRequest.repository.pullRequest.headRefName,
+            to: retrievedPullRequest.repository.pullRequest.baseRefName,
+          });
+        }
       }
     };
 
-    const getAutoMergeState = async () => {
+    const getPullRequest = async () => {
       const variables: PullRequestVariables = {
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
@@ -109,7 +162,7 @@ async function run() {
         const response = JSON.stringify(result, undefined, 2);
         console.log(`The response payload: ${response}`);
 
-        return result.repository?.pullRequest?.autoMergeRequest?.mergeMethod;
+        return result;
       } catch (error) {
         console.log(`Request failed: ${JSON.stringify(error)}`);
       }
@@ -120,7 +173,10 @@ async function run() {
     const disabledLabel = core.getInput('disabled-label');
     const strategy = core.getInput('strategy') || 'SQUASH';
 
-    const currentMergeState = await getAutoMergeState();
+    const retrievedPullRequest = await getPullRequest();
+    const currentMergeState =
+      retrievedPullRequest.repository?.pullRequest?.autoMergeRequest
+        ?.mergeMethod;
 
     const payload = github.context.payload as PullRequestEvent;
     const pullRequest = payload.pull_request;
@@ -144,13 +200,13 @@ async function run() {
     if (disableAutoMerge) {
       if (currentMergeState) {
         console.log('Disabling auto-merge for this PR.');
-        await setAutoMerge(pullRequest, false, strategy);
+        await setAutoMerge(pullRequest, null, false, strategy);
       } else {
         console.log('Auto Merge is already in the correct state.');
       }
     } else if (enableAutoMerge && !stateMatchesStrategy) {
       console.log('Enabling auto-merge for this PR.');
-      await setAutoMerge(pullRequest, true, strategy);
+      await setAutoMerge(pullRequest, retrievedPullRequest, true, strategy);
     } else {
       console.log('Auto Merge is already in the correct state.');
     }
