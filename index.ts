@@ -3,8 +3,8 @@ import * as github from '@actions/github';
 import { graphql } from '@octokit/graphql';
 import { PullRequestEvent, PullRequest } from '@octokit/webhooks-types';
 
-const enableAutoMergeMutation = `mutation enableAutoMerge($pullRequestId: ID!, $strategy: PullRequestMergeMethod) {
-  enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: $strategy}) {
+const enableAutoMergeMutation = `mutation enableAutoMerge($pullRequestId: ID!, $strategy: PullRequestMergeMethod, $author: String) {
+  enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: $strategy, authorEmail: $author}) {
     pullRequest {
       id
       autoMergeRequest {
@@ -30,6 +30,9 @@ const disableAutoMergeMutation = `mutation disableAutoMerge($pullRequestId: ID!)
 const getPullRequestQuery = `query getPullRequest($owner: String!, $repo: String!, $number: Int!) {
   repository(name: $repo, owner: $owner) {
     pullRequest(number: $number) {
+      author {
+        login
+      }
       autoMergeRequest {
         mergeMethod
       }
@@ -41,6 +44,7 @@ const getPullRequestQuery = `query getPullRequest($owner: String!, $repo: String
 declare type AutoMergeVariables = {
   pullRequestId: String;
   strategy?: String;
+  author?: String;
 };
 
 declare type PullRequestVariables = {
@@ -52,6 +56,9 @@ declare type PullRequestVariables = {
 declare type PullRequestAutoMergeResponse = {
   repository?: {
     pullRequest?: {
+      author: {
+        login: String;
+      };
       autoMergeRequest?: {
         mergeMethod: String;
       };
@@ -75,6 +82,7 @@ async function run() {
       pullRequest: PullRequest,
       enable: boolean,
       strategy: string,
+      author: String,
     ) => {
       try {
         const query = enable
@@ -85,6 +93,7 @@ async function run() {
         };
         if (enable) {
           variables.strategy = strategy;
+          variables.author = author;
         }
         const result = await graphqlWithAuth(query, variables);
         const response = JSON.stringify(result, undefined, 2);
@@ -94,7 +103,7 @@ async function run() {
       }
     };
 
-    const getAutoMergeState = async () => {
+    const getPullRequest = async () => {
       const variables: PullRequestVariables = {
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
@@ -109,7 +118,7 @@ async function run() {
         const response = JSON.stringify(result, undefined, 2);
         console.log(`The response payload: ${response}`);
 
-        return result.repository?.pullRequest?.autoMergeRequest?.mergeMethod;
+        return result;
       } catch (error) {
         console.log(`Request failed: ${JSON.stringify(error)}`);
       }
@@ -120,7 +129,10 @@ async function run() {
     const disabledLabel = core.getInput('disabled-label');
     const strategy = core.getInput('strategy') || 'SQUASH';
 
-    const currentMergeState = await getAutoMergeState();
+    const retrievedPR = await getPullRequest();
+    const currentMergeState =
+      retrievedPR?.repository?.pullRequest?.autoMergeRequest?.mergeMethod;
+    const author = retrievedPR?.repository?.pullRequest?.author.login;
 
     const payload = github.context.payload as PullRequestEvent;
     const pullRequest = payload.pull_request;
@@ -144,13 +156,13 @@ async function run() {
     if (disableAutoMerge) {
       if (currentMergeState) {
         console.log('Disabling auto-merge for this PR.');
-        await setAutoMerge(pullRequest, false, strategy);
+        await setAutoMerge(pullRequest, false, strategy, author);
       } else {
         console.log('Auto Merge is already in the correct state.');
       }
     } else if (enableAutoMerge && !stateMatchesStrategy) {
       console.log('Enabling auto-merge for this PR.');
-      await setAutoMerge(pullRequest, true, strategy);
+      await setAutoMerge(pullRequest, true, strategy, null);
     } else {
       console.log('Auto Merge is already in the correct state.');
     }

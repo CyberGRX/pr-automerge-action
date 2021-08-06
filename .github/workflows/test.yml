@@ -5,7 +5,7 @@ on:
     types: [labeled, unlabeled, auto_merge_enabled]
 
 jobs:
-  rename_pr_job:
+  manage_automerge_state:
     runs-on: ubuntu-latest
     name: Manage auto merge state
     steps:
