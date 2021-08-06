@@ -13,17 +13,11 @@ jobs:
       # you must check out the repository
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Generate token
-        id: generate_token
-        uses: tibdex/github-app-token@v1.3
-        with:
-          app_id: ${{ secrets.EKS_ACTION_WORKER_APP_ID }}
-          private_key: ${{ secrets.EKS_ACTION_WORKER_PRIVATE_KEY }}
       - name: Configure Auto Merge
         uses: ./ # Uses an action in the root directory
         id: pr-auto-configuration
         env:
-          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_MERGE_AUTOMATION }}
         with:
           activate-label: 'merge:auto'
           disabled-label: 'merge:manual'
