@@ -1,13 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import * as format from 'string-format';
 import { graphql } from '@octokit/graphql';
-import {
-  WebhookEventMap,
-  PullRequestEvent,
-  PullRequest,
-} from '@octokit/webhooks-types';
-import { titleCase } from 'title-case';
+import { PullRequestEvent, PullRequest } from '@octokit/webhooks-types';
 
 const enableAutoMergeMutation = `mutation enableAutoMerge($pullRequestId: ID!, $strategy: PullRequestMergeMethod) {
   enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: $strategy}) {
@@ -146,10 +140,6 @@ async function run() {
       foundDisabledLabel !== undefined || enableLabelRemoved;
 
     const stateMatchesStrategy = currentMergeState === strategy;
-
-    console.log(
-      `The github context: ${JSON.stringify(github.context, undefined, 2)}`,
-    );
 
     if (disableAutoMerge) {
       if (currentMergeState) {
