@@ -128,13 +128,21 @@ async function run() {
     const currentMergeState = await getAutoMergeState();
 
     const payload = github.context.payload as PullRequestEvent;
-    const pr = payload.pull_request;
+    const pullRequest = payload.pull_request;
+    const enableAutoMerge =
+      pullRequest.labels.find(l => l.name === label) !== undefined;
+    const stateMatchesStrategy = currentMergeState === strategy;
 
-    const found = pr.labels.find(l => l.name === label);
-    if (!found) {
-      console.log('Not found');
+    if (enableAutoMerge && stateMatchesStrategy) {
+      console.log('Auto Merge is already in the correct state.');
+    } else if (enableAutoMerge && !stateMatchesStrategy) {
+      console.log('Enabling auto-merge for this PR.');
+      await setAutoMerge(pullRequest, true, strategy);
+    } else if (!enableAutoMerge && currentMergeState) {
+      console.log('Disabling auto-merge for this PR.');
+      await setAutoMerge(pullRequest, false, strategy);
     } else {
-      console.log('Merge state', currentMergeState);
+      console.log('Auto-merge is not active, and there is no matching label.');
     }
   } catch (error) {
     core.setFailed(error.message);
