@@ -136,6 +136,7 @@ async function run() {
 
         // Attempt to directly merge if the PR was not in an auto-mergable state (no pending checks == direct merge)
         if (
+          retrievedPullRequest &&
           retrievedPullRequest.repository &&
           errorStr.includes(
             'Pull request is not in the correct state to enable auto-merge',
