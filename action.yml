@@ -1,13 +1,13 @@
 name: 'PR AutoMerge Management'
 description: 'Configure and disable auto merge using labels'
 inputs:
-  label:
+  activate-label:
     description: 'A PR with this label will be configured to auto merge.'
     required: true
   strategy:
     description: "What merge strategy to use, one of [MERGE, SQUASH, REBASE], defaults to SQUASH"
     required: false
-  disable-label:
+  disabled-label:
     description: 'A PR with this label will have auto-merge forced off.'
     required: false
 runs:

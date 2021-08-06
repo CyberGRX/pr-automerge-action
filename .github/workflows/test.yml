@@ -19,5 +19,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          label: 'merge:auto'
+          activate-label: 'merge:auto'
+          disabled-label: 'merge:manual'
           strategy: 'SQUASH'

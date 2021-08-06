@@ -122,27 +122,38 @@ async function run() {
       return null;
     };
 
-    const label = core.getInput('label');
+    const activatedLabel = core.getInput('activate-label');
+    const disabledLabel = core.getInput('disabled-label');
     const strategy = core.getInput('strategy');
 
     const currentMergeState = await getAutoMergeState();
 
     const payload = github.context.payload as PullRequestEvent;
     const pullRequest = payload.pull_request;
-    const enableAutoMerge =
-      pullRequest.labels.find(l => l.name === label) !== undefined;
+    const foundActiveLabel = pullRequest.labels.find(
+      l => l.name === activatedLabel,
+    );
+    const foundDisabledLabel = pullRequest.labels.find(
+      l => l.name === disabledLabel,
+    );
+
+    const enableAutoMerge = foundActiveLabel !== undefined;
+    const disableAutoMerge = foundDisabledLabel !== undefined;
+
     const stateMatchesStrategy = currentMergeState === strategy;
 
-    if (enableAutoMerge && stateMatchesStrategy) {
-      console.log('Auto Merge is already in the correct state.');
+    console.log(
+      `The github context: ${JSON.stringify(github.context, undefined, 2)}`,
+    );
+
+    if (disableAutoMerge && currentMergeState) {
+      console.log('Disabling auto-merge for this PR.');
+      await setAutoMerge(pullRequest, false, strategy);
     } else if (enableAutoMerge && !stateMatchesStrategy) {
       console.log('Enabling auto-merge for this PR.');
       await setAutoMerge(pullRequest, true, strategy);
-    } else if (!enableAutoMerge && currentMergeState) {
-      console.log('Disabling auto-merge for this PR.');
-      await setAutoMerge(pullRequest, false, strategy);
     } else {
-      console.log('Auto-merge is not active, and there is no matching label.');
+      console.log('Auto Merge is already in the correct state.');
     }
   } catch (error) {
     core.setFailed(error.message);
