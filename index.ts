@@ -1,13 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import * as format from 'string-format';
 import { graphql } from '@octokit/graphql';
-import {
-  WebhookEventMap,
-  PullRequestEvent,
-  PullRequest,
-} from '@octokit/webhooks-types';
-import { titleCase } from 'title-case';
+import { PullRequestEvent, PullRequest } from '@octokit/webhooks-types';
 
 const enableAutoMergeMutation = `mutation enableAutoMerge($pullRequestId: ID!, $strategy: PullRequestMergeMethod) {
   enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: $strategy}) {
@@ -55,6 +49,16 @@ declare type PullRequestVariables = {
   number: Number;
 };
 
+declare type PullRequestAutoMergeResponse = {
+  repository?: {
+    pullRequest?: {
+      autoMergeRequest?: {
+        mergeMethod: String;
+      };
+    };
+  };
+};
+
 async function run() {
   try {
     const token = process.env['GITHUB_TOKEN'];
@@ -90,32 +94,65 @@ async function run() {
       }
     };
 
-    const getPullRequest = async () => {
+    const getAutoMergeState = async () => {
       const variables: PullRequestVariables = {
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
         number: github.context.payload.pull_request.number,
       };
       try {
-        const result = await graphqlWithAuth(getPullRequestQuery, variables);
+        const result = (await graphqlWithAuth(
+          getPullRequestQuery,
+          variables,
+        )) as PullRequestAutoMergeResponse;
+
         const response = JSON.stringify(result, undefined, 2);
         console.log(`The response payload: ${response}`);
+
+        return result.repository?.pullRequest?.autoMergeRequest?.mergeMethod;
       } catch (error) {
         console.log(`Request failed: ${JSON.stringify(error)}`);
       }
+      return null;
     };
 
-    const label = core.getInput('label');
-    const strategy = core.getInput('strategy');
+    const activatedLabel = core.getInput('activate-label');
+    const disabledLabel = core.getInput('disabled-label');
+    const strategy = core.getInput('strategy') || 'SQUASH';
 
-    await getPullRequest();
+    const currentMergeState = await getAutoMergeState();
 
     const payload = github.context.payload as PullRequestEvent;
-    const pr = payload.pull_request;
+    const pullRequest = payload.pull_request;
+    const foundActiveLabel = pullRequest.labels.find(
+      l => l.name === activatedLabel,
+    );
+    const foundDisabledLabel = pullRequest.labels.find(
+      l => l.name === disabledLabel,
+    );
 
-    const found = pr.labels.find(l => l.name === label);
-    if (!found) {
-      console.log('Not found');
+    const enableAutoMerge = foundActiveLabel !== undefined;
+    const enableLabelRemoved =
+      payload.action === 'unlabeled' && payload?.label?.name === activatedLabel;
+
+    // Disable merging if the label is set or the enable label is removed
+    const disableAutoMerge =
+      foundDisabledLabel !== undefined || enableLabelRemoved;
+
+    const stateMatchesStrategy = currentMergeState === strategy;
+
+    if (disableAutoMerge) {
+      if (currentMergeState) {
+        console.log('Disabling auto-merge for this PR.');
+        await setAutoMerge(pullRequest, false, strategy);
+      } else {
+        console.log('Auto Merge is already in the correct state.');
+      }
+    } else if (enableAutoMerge && !stateMatchesStrategy) {
+      console.log('Enabling auto-merge for this PR.');
+      await setAutoMerge(pullRequest, true, strategy);
+    } else {
+      console.log('Auto Merge is already in the correct state.');
     }
   } catch (error) {
     core.setFailed(error.message);
