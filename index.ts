@@ -95,6 +95,7 @@ async function run() {
           variables.strategy = strategy;
           variables.author = author;
         }
+        console.log(`${JSON.stringify(variables)}`);
         const result = await graphqlWithAuth(query, variables);
         const response = JSON.stringify(result, undefined, 2);
         console.log(`The response payload: ${response}`);
