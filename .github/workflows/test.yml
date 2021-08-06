@@ -1,0 +1,24 @@
+name: Manage Auto Merge
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  rename_pr_job:
+    runs-on: ubuntu-latest
+    name: Rename a PR
+    steps:
+      # To use this repository's private action,
+      # you must check out the repository
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Rename PR
+        uses: ./ # Uses an action in the root directory
+        id: pr-auto-namer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          branch-regex: '(?<prefix>.*?)(?<team>[\d\w]+)-(?<ticket>\d+)(?<postfix>.*)'
+          title-format: '{team!upper}-{ticket!upper}: {postfix!normalize}'
+          check-format: '{team!upper}-{ticket!upper}'

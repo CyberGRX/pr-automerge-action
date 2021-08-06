@@ -1,0 +1,43 @@
+{
+  "name": "pr-automerge-action",
+  "version": "1.0.0",
+  "description": "Manage a PR's auto merge state using labels",
+  "main": "index.js",
+  "dependencies": {
+    "@actions/core": "^1.4.0",
+    "@actions/github": "^5.0.0",
+    "@octokit/graphql": "^4.6.4",
+    "@octokit/webhooks": "^9.11.0",
+    "string-format": "^2.0.0",
+    "title-case": "^3.0.3",
+    "tslib": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/lodash.pick": "^4.4.6",
+    "@types/node": "^13.13.52",
+    "@typescript-eslint/eslint-plugin": "^2.18.0",
+    "@typescript-eslint/parser": "^2.18.0",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.15.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "prettier": "^1.19.1",
+    "typescript": "^3.9.10"
+  },
+  "scripts": {
+    "build": "npm run fmt && ncc build -m index.ts --license licenses.txt",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --cache --ext .ts ./",
+    "fmt": "eslint --cache --fix --ext .ts ./ && prettier --write **/*.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CyberGRX/pr-automerge-action.git"
+  },
+  "keywords": [],
+  "author": "CyberGRX Development Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/CyberGRX/pr-automerge-action/issues"
+  },
+  "homepage": "https://github.com/CyberGRX/pr-automerge-action#readme"
+}
