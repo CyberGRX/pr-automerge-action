@@ -4,11 +4,11 @@ inputs:
   activate-label:
     description: 'A PR with this label will be configured to auto merge.'
     required: true
-  strategy:
-    description: "What merge strategy to use, one of [MERGE, SQUASH, REBASE], defaults to SQUASH"
-    required: false
   disabled-label:
     description: 'A PR with this label will have auto-merge forced off.'
+    required: false
+  strategy:
+    description: "What merge strategy to use, one of [MERGE, SQUASH, REBASE], defaults to SQUASH"
     required: false
 runs:
   using: 'node12'

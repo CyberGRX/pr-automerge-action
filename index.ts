@@ -118,7 +118,7 @@ async function run() {
 
     const activatedLabel = core.getInput('activate-label');
     const disabledLabel = core.getInput('disabled-label');
-    const strategy = core.getInput('strategy');
+    const strategy = core.getInput('strategy') || 'SQUASH';
 
     const currentMergeState = await getAutoMergeState();
 
